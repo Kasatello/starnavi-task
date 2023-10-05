@@ -1,6 +1,5 @@
-from django.db.models import Count, F, Prefetch, OuterRef, Exists
+from django.db.models import Count
 from django.db.models.functions import TruncDate
-from django.utils.dateparse import parse_date
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
