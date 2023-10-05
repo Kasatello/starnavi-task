@@ -1,4 +1,4 @@
-from django.db.models import Count, F
+from django.db.models import Count, F, Prefetch, OuterRef, Exists
 from django.db.models.functions import TruncDate
 from django.utils.dateparse import parse_date
 from rest_framework import viewsets, status
@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.viewsets import ViewSet
 
 from user.models import CustomUser
-from .models import Post
+from .models import Post, PostLike
 from .serializers import PostSerializer
 
 
@@ -28,34 +28,34 @@ class PostViewSet(viewsets.ModelViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class PostLikeViewSet(viewsets.ModelViewSet):
+class PostLikeViewSet(ViewSet):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
 
     @action(detail=True, methods=["POST"])
     def like_post(self, request, pk=None):
-        post = get_object_or_404(Post, pk=pk)
         user = request.user
+        post = get_object_or_404(Post, pk=pk)
 
-        if user in post.likes.all():
+        if PostLike.objects.filter(user=user, post=post).exists():
             return Response(
                 {"detail": "You have already liked this post"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        post.likes.add(user)
+        PostLike.objects.create(user=user, post=post)
         return Response({"detail": "Post liked"}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["POST"])
     def unlike_post(self, request, pk=None):
-        post = get_object_or_404(Post, pk=pk)
         user = request.user
+        post = get_object_or_404(Post, pk=pk)
 
-        if user not in post.likes.all():
+        if not PostLike.objects.filter(user=user, post=post).exists():
             return Response(
                 {"detail": "You have not liked this post"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        post.likes.remove(user)
+        PostLike.objects.filter(user=user, post=post).delete()
         return Response(
             {"detail": "You have unliked this post"}, status=status.HTTP_200_OK
         )
